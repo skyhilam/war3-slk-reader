@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Page Title</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/foundation/6.5.3/js/foundation.min.js">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/foundation/6.5.3/css/foundation-prototype.min.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.10/vue.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.15/lodash.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.0/axios.min.js"></script>
+    </head>
+    <body>
+
+        <div id="app">
+            <div class="padding-2">
+                <input type="checkbox" v-model="sync" ><label for="sync">同步</label>
+                <div class="grid-x grid-margin-x">
+                    <div class="cell auto">
+                        <input type="file" @change="selectedText" accept=".txt">
+                        <input type="text" v-model="filter">
+                        <div style="white-space: pre-line;" v-for="t in textlist" :key="t">[{{t}}</div>
+                    </div>
+
+
+                    <div class="cell auto">
+                        <reader :sync="sync" :syncfilter="filter" ref="reader"></reader>
+                    </div>
+
+
+                    <div class="cell auto">
+                        <reader :filterable="!sync" :list="syncKey"></reader>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            Vue.component('reader', {
+                template: ' <div > <input type="file" @change="selected" accept=".slk"> <input type="text" v-model="filter" v-if="!sync && filterable"> <div v-if="file" class="grid-x" > <div class="cell medium-2 margin-right-1" > <table > <thead> <tr> <th>單位ID</th> </tr></thead> <tbody> <tr v-for="id in items" :key="id"> <td @click="objectid=id" style="cursor: pointer;">{{id}}</td></tr></tbody> </table> </div><div class="cell auto" > <table > <tbody> <tr v-for="(label, key) in labels" :key="label" v-if="key !=\'id\'"> <td>{{key}}</td><td>{{label}}</td><td>{{get(key)}}</td></tr></tbody> </table> </div></div></div>',
+                props: {
+                    sync: Boolean,
+                    syncfilter: String,
+                    filterable: {
+                        type: Boolean,
+                        default: true
+                    },
+                    list: Array,
+                },
+                data() {
+                    return {
+                        json: {},
+                        file: null,
+                        labels: [],
+                        objectid: null,
+                        filter: '',
+                    }
+                },
+                methods: {
+                    selected(e) {
+                        if (e.target.files && e.target.files.length) {
+                            const file = e.target.files[0]
+                            this.file = file
+                            const formData = new FormData()
+                            formData.append('file', file)
+
+                            axios.post('/slk', formData)
+                                .then(resp => {
+                                    this.json = resp.data.data
+                                    this.labels = resp.data.labels
+                                })
+                        }
+                    },
+                    get(key) {
+                        return _.get(this.object, key, '-') || '-'
+                    },
+                },
+                computed: {
+                    ids() {
+                        const ids = _.map(this.json, i => {
+                            return _.get(i, this.label_key)
+                        })
+                        const text = this.sync? this.syncfilter: this.filter
+                        return _.filter(ids, i => i.toLowerCase().match(text.toLowerCase()))
+                    },
+                    items() {
+                        return !this.filterable? this.list: this.ids
+                    },
+                    label_key() {
+                        return _.get(this.labels, 'id')
+                    },
+                    object() {
+                        const data = {}
+                        data[this.label_key] = this.sync? _.first(this.ids): this.objectid
+                        return _.find(this.json, data)
+                    },
+                }
+            })
+        </script>
+
+        <script>
+            new Vue({
+                el: '#app',
+                data: {
+                    filter: '',
+                    text: '',
+                    sync: true,
+                    syncKey: ''
+                },
+                methods: {
+                    selectedText(e) {
+                        if (e.target.files && e.target.files.length) {
+                            const file = e.target.files[0]
+                            const reader = new FileReader();
+
+                            reader.readAsText(file);
+
+                            reader.onload = () => {
+                                this.text = reader.result
+                            };
+
+                        }
+                    }
+                },
+                computed: {
+                    textlist() {
+                        const result = this.text.split('[')
+                        result.shift()
+                        return _.filter(result, i => i.toLowerCase().match(this.filter.toLowerCase()))
+                    },
+                },
+                watch: {
+                    'filter'() {
+                        if (this.sync) {
+                            setTimeout(() => {
+                                this.syncKey = this.$refs.reader.get('abilList').split(',')
+                            }, 100);
+                        }
+                    }
+                }
+            })
+        </script>
+    </body>
+
+</html>

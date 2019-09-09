@@ -1,0 +1,22 @@
+{
+  "name": "war3",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.19.0",
+    "express": "^4.17.1",
+    "express-fileupload": "^1.1.5",
+    "format-data": "^2.1.2",
+    "j": "^1.0.0",
+    "loadsh": "0.0.4",
+    "snake-case": "^2.1.0",
+    "tabular-stream": "^3.0.0",
+    "xlsx": "^0.15.1"
+  }
+}
